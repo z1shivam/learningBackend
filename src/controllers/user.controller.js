@@ -17,24 +17,34 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 // 10. return response.
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, fullname, password } = req.body;
+  const { username, email, fullName, password } = req.body;
   if (
-    [username, email, fullname, password].some((field) => {
-      field?.trim() === "";
-    })
+    [username, email, fullName, password].some((field) =>
+      [field?.trim() === ""].some(Boolean)
+    )
   ) {
     throw new ApiError(404, "All fields are required");
   }
 
   // check for existing user
-  const existedUser =await User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
   if (existedUser) throw new ApiError(400, "User Already Exists.");
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
   // why we want first property: becauae first property contains the object which contain path of the file on our server
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path || "";
+
+  let coverImageLocalPath;
+  if (
+    req.files.coverImage &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
+  
   if (!avatarLocalPath) throw new ApiError(400, "Avatar File Required");
 
   // upload them to cloudinary
@@ -44,14 +54,17 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     username: username.toLowerCase(),
+    fullName: fullName,
     avatar: avatar.url,
     email: email.toLowerCase(),
     coverImage: coverImage?.url || "",
     password: password,
   });
 
-  const createdUser = User.findById(user._id).select("-password -refreshToken");
-  if (createdUser) throw new ApiError(500, "Database Error");
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+  if (!createdUser) throw new ApiError(500, "Database Error");
 
   return res
     .status(201)
