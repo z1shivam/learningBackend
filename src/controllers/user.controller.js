@@ -4,6 +4,24 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateRefreshToken();
+    const refreshToken = user.generateAccessToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "something went wrong while generating refresh and access tokens."
+    );
+  }
+};
+
 // Steps to impliment register user
 // 1. get data from frontend
 // 2. check for required fields if they are empty or not.
@@ -44,7 +62,7 @@ const registerUser = asyncHandler(async (req, res) => {
   ) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
-  
+
   if (!avatarLocalPath) throw new ApiError(400, "Avatar File Required");
 
   // upload them to cloudinary
@@ -71,4 +89,38 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User created Successfully"));
 });
 
-export { registerUser };
+/*
+How to login user
+1. get data from users
+2. check if any empty string is there
+3. search for username in database
+4. if user found, compare the password using the bcrypt function specified in user.model.js
+5. if function returns true, returns true and give the user, the access token. and refresh token
+6. send cookie
+*/
+
+const loginUser = asyncHandler(async (req, res) => {
+  // get data from user and check if email or username is there.
+  const { username, email, password } = req.body;
+  if (!username || !email)
+    throw new ApiError(400, "Email or Username Field is Required!");
+
+  // search for if username or email is there in db
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (!user) throw new ApiError(404, "user does not exist.");
+
+  // * At this point, we have found the user in the database, now we need to check if the password provided is true or false. for this we will use bcrypt password check(we defined in model file)
+  const isPasswordValid = await user.isPasswordCorrect(password);
+  if (!isPasswordValid) throw new ApiError(400, "Invalid Password");
+
+  // now at this point, password is correct. now we will generate access and refresh token and send that to user.
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
+
+  
+});
+export { registerUser, loginUser };
