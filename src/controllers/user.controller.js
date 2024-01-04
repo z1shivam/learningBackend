@@ -183,7 +183,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
     const userId = decodedToken?._id;
-    const user = await findById(userId);
+    const user = await User.findById(userId);
     if (!user) throw new ApiError(401, "Invalid Token");
 
     if (user?.refreshToken !== incomingRefreshToken) {
@@ -193,16 +193,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: true,
     };
-    const { accessToken, newRefreshToken } =
+    const { accessToken, refreshToken } =
       await generateAccessAndRefreshTokens(userId);
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { accessToken, newRefreshToken },
+          { accessToken, refreshToken },
           "Access Token Refreshed"
         )
       );
