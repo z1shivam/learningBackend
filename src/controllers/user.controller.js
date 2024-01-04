@@ -102,9 +102,10 @@ How to login user
 const loginUser = asyncHandler(async (req, res) => {
   // get data from user and check if email or username is there.
   const { username, email, password } = req.body;
-  if (!username || !email)
+  if (!username && !email) {
     throw new ApiError(400, "Email or Username Field is Required!");
-
+  }
+  
   // search for if username or email is there in db
   const user = await User.findOne({
     $or: [{ username }, { email }],
@@ -139,8 +140,8 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
-          accessToken,
-          refreshToken,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
         },
         "User Logged In Successfully"
       )
