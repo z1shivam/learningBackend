@@ -211,4 +211,72 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword && !newPassword)
+    throw new ApiError(400, "Both fields are required.");
+
+  const user = await User.findById(req.user._id);
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  if (!isPasswordCorrect) throw new ApiError(401, "Unauthorized request");
+
+  const newUser = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        password: newPassword,
+      },
+    },
+    { new: true }
+  );
+
+  if (!newUser) throw new ApiError(401, "Problem with Updating Password");
+  res
+    .status(200)
+    .json(new ApiResponse(201, {}, "Password Updated Successfully"));
+});
+
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const { fullName, email, username } = req.body;
+
+  if (!fullName && !email && !username) {
+    throw new ApiError(400, "All fields are required.");
+  }
+
+  try {
+    const newUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          fullName,
+          email,
+          username,
+        },
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!newUser) {
+      throw new ApiError(400, "There was an error updating the profile.");
+    }
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, newUser, "User Profile Updated successfully"));
+  } catch (error) {
+    // Handle specific errors or log them for further investigation
+    console.error(error);
+    throw new ApiError(500, "Internal Server Error");
+  }
+});
+
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  updateUserProfile,
+  changeCurrentPassword,
+};
