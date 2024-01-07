@@ -19,7 +19,6 @@ app.use(express.static("public"));
 // Routes
 import router from "./routes/user.routes.js";
 
-// Routes Declaration: http://localhost:8000/api/v1/user/register
 app.use("/api/v1/users", router);
 
 // Use the error handling middleware
