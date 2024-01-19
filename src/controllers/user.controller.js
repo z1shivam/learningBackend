@@ -148,7 +148,7 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 });
-
+k
 // stratedgy for logout.
 const logoutUser = asyncHandler(async (req, res) => {
   const options = {
